@@ -20,7 +20,7 @@ Make sure you have the following installed:
 The backend uses a Python script for image processing. Install the necessary Python libraries:
 
 ```bash
-pip install Pillow numpy scikit-learn
+pip install Pillow numpy scikit-learn scikit-image
 ```
 
 ### 2. Install Node.js Dependencies
