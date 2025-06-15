@@ -4,7 +4,7 @@ import path from "path"
 
 export async function POST(request: NextRequest) {
   try {
-    const { image, size, position, scale, colorPalette } = await request.json()
+    const { image, size, position, scale, colorPalette, maxColors } = await request.json()
 
     const scriptPath = path.join(process.cwd(), "scripts", "pixel_art_converter.py")
     const pythonExecutable = "python3" // Prefer python3
@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
           position, // Pass through, even if not used by script currently
           scale,    // Pass through
           color_palette: colorPalette, // Python script expects 'color_palette'
+          max_colors: maxColors, // Pass to Python script, snake_case
         }),
       )
       pythonProcess.stdin.end()
@@ -80,6 +81,7 @@ export async function POST(request: NextRequest) {
               position,
               scale,
               color_palette: colorPalette,
+              max_colors: maxColors, // Pass to Python script (fallback)
             }),
           );
           fallbackProcess.stdin.end();

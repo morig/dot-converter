@@ -1,6 +1,6 @@
 # Pixel Art Converter
 
-This application allows you to convert uploaded images into pixel art. You can specify the output size and choose colors from a palette to further customize your artwork.
+This application allows you to convert uploaded images into pixel art. You can specify the output size and choose colors from a palette to further customize your artwork. Additionally, you can set a maximum number of colors for the final output to simplify the color scheme.
 
 ## How to Run
 
