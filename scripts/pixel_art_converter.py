@@ -2,6 +2,7 @@ import numpy as np
 from PIL import Image, ImageFilter
 import json
 from sklearn.cluster import KMeans
+from skimage.color import rgb2lab # Added for CIELAB
 import io
 import base64
 import sys # Added for potential debug prints
@@ -33,27 +34,42 @@ def remove_background(image_data):
 
 def find_closest_color(rgb, color_palette):
     """
-    RGB値に最も近いパレット色を見つける
+    RGB値に最も近いパレット色を見つける (using CIELAB color space)
     """
+    # Convert target pixel to CIELAB
+    # rgb is expected to be a list/tuple or numpy array slice like [R, G, B] with values 0-255
+    pixel_rgb_normalized = np.array([[(c / 255.0) for c in rgb]], dtype=np.float32) # Corrected: removed extra ']'
+    pixel_lab = rgb2lab(pixel_rgb_normalized)[0]
+
     min_distance = float('inf')
-    closest_color = None
+    closest_hex_color_str = None # Store the hex string part
     closest_name = None
     
-    for name, hex_color in color_palette.items():
-        # HEX to RGB
-        hex_color = hex_color.lstrip('#')
-        palette_rgb = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+    for name, hex_color_palette_entry in color_palette.items():
+        # HEX to RGB (0-255)
+        hex_color_str_palette = hex_color_palette_entry.lstrip('#')
+        palette_rgb_tuple = tuple(int(hex_color_str_palette[i:i+2], 16) for i in (0, 2, 4))
         
-        # ユークリッド距離を計算
-        # Cast components to int to prevent numpy uint8 overflow/underflow issues
-        distance = sum((int(a) - int(b)) ** 2 for a, b in zip(rgb, palette_rgb)) ** 0.5
+        # Convert palette RGB to CIELAB
+        palette_rgb_normalized = np.array([[(c / 255.0) for c in palette_rgb_tuple]], dtype=np.float32) # Corrected: removed extra ']'
+        palette_lab = rgb2lab(palette_rgb_normalized)[0]
+
+        # Calculate Euclidean distance in CIELAB space
+        distance = np.linalg.norm(pixel_lab - palette_lab)
         
         if distance < min_distance:
             min_distance = distance
-            closest_color = hex_color
+            closest_hex_color_str = hex_color_str_palette # store the hex numbers only
             closest_name = name
-    
-    return f"#{closest_color}", closest_name
+
+    if closest_hex_color_str is None: # Should not happen if palette is not empty
+        # Fallback or error, though practically, with a non-empty palette, a closest will always be found.
+        # For safety, could return a default or raise an error.
+        # Here, we'll assume it always finds one if palette is valid.
+        # Defaulting to black if nothing found (should be handled better if palette can be empty)
+        return "#000000", "black"
+
+    return f"#{closest_hex_color_str}", closest_name
 
 def create_pixel_art(image_data, size, color_palette):
     """
