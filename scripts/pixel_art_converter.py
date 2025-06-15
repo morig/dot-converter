@@ -39,7 +39,7 @@ def find_closest_color(rgb, color_palette):
     # Convert target pixel to CIELAB
     # rgb is expected to be a list/tuple or numpy array slice like [R, G, B] with values 0-255
     pixel_rgb_normalized = np.array([[(c / 255.0) for c in rgb]], dtype=np.float32) # Corrected: removed extra ']'
-    pixel_lab = rgb2lab(pixel_rgb_normalized)[0][0]
+    pixel_lab = rgb2lab(pixel_rgb_normalized)[0]
 
     min_distance = float('inf')
     closest_hex_color_str = None # Store the hex string part
@@ -52,7 +52,7 @@ def find_closest_color(rgb, color_palette):
         
         # Convert palette RGB to CIELAB
         palette_rgb_normalized = np.array([[(c / 255.0) for c in palette_rgb_tuple]], dtype=np.float32) # Corrected: removed extra ']'
-        palette_lab = rgb2lab(palette_rgb_normalized)[0][0]
+        palette_lab = rgb2lab(palette_rgb_normalized)[0]
 
         # Calculate Euclidean distance in CIELAB space
         distance = np.linalg.norm(pixel_lab - palette_lab)
