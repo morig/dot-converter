@@ -1,30 +1,61 @@
-# Dot art application
+# Pixel Art Converter
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+This application allows you to convert uploaded images into pixel art. You can specify the output size and choose colors from a palette to further customize your artwork.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/morigs-projects/v0-dot-art-application)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/mNlvcZJrp2y)
+## How to Run
 
-## Overview
+Follow these steps to set up and run the application locally.
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+### Prerequisites
 
-## Deployment
+Make sure you have the following installed:
 
-Your project is live at:
+*   **Node.js:** (LTS version recommended)
+*   **npm** (comes with Node.js) or **pnpm**
+*   **Python 3:** (Version 3.7 or higher recommended)
+*   **pip** (comes with Python)
 
-**[https://vercel.com/morigs-projects/v0-dot-art-application](https://vercel.com/morigs-projects/v0-dot-art-application)**
+### 1. Install Python Dependencies
 
-## Build your app
+The backend uses a Python script for image processing. Install the necessary Python libraries:
 
-Continue building your app on:
+```bash
+pip install Pillow numpy scikit-learn
+```
 
-**[https://v0.dev/chat/projects/mNlvcZJrp2y](https://v0.dev/chat/projects/mNlvcZJrp2y)**
+### 2. Install Node.js Dependencies
 
-## How It Works
+Navigate to the project's root directory in your terminal and install the Node.js dependencies:
 
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+Using npm:
+```bash
+npm install
+```
+
+Or using pnpm:
+```bash
+pnpm install
+```
+*(If you encounter issues with peer dependencies, you might need to use `npm install --legacy-peer-deps` or configure pnpm accordingly.)*
+
+### 3. Run the Application
+
+Once the dependencies are installed, you can start the Next.js development server:
+
+Using npm:
+```bash
+npm run dev
+```
+
+Or using pnpm:
+```bash
+pnpm dev
+```
+
+### 4. Access the Application
+
+After the server starts (usually indicated by a message like `✓ Ready in ...ms` and `event - compiled client and server successfully in ... ms`), open your web browser and navigate to:
+
+[http://localhost:3000](http://localhost:3000)
+
+You should now see the Pixel Art Converter application running.
