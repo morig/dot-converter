@@ -121,6 +121,7 @@ export default function PixelArtConverter() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 })
   const [outputSize, setOutputSize] = useState<number>(32)
+  const [maxOutputColors, setMaxOutputColors] = useState<number>(16);
   const [pixelArt, setPixelArt] = useState<PixelData[][]>([])
   const [selectedColor, setSelectedColor] = useState<string>("")
   const [usedColors, setUsedColors] = useState<UsedColor[]>([])
@@ -191,6 +192,7 @@ export default function PixelArtConverter() {
           position: imagePosition,
           scale: imageScale,
           colorPalette: COLOR_PALETTE,
+          maxColors: maxOutputColors, // Add this new parameter
         }),
       })
 
@@ -396,6 +398,21 @@ export default function PixelArtConverter() {
                 onChange={(e) => setOutputSize(Number(e.target.value))}
                 min="8"
                 max="128"
+                className="mb-4"
+              />
+
+              <label className="block text-sm font-medium mb-2 mt-4">最大色数 (0で無制限)</label>
+              <Input
+                type="number"
+                value={maxOutputColors}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  // Allow empty string to be handled as 0, or parse the number
+                  // Ensure that if the input is cleared, it defaults to 0, or handle appropriately if 0 is not desired as default for empty.
+                  setMaxOutputColors(val === "" ? 0 : parseInt(val, 10));
+                }}
+                min="0"
+                placeholder="例: 16 (0で無制限)"
                 className="mb-4"
               />
 

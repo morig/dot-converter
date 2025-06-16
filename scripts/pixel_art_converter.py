@@ -6,6 +6,7 @@ from skimage.color import rgb2lab # Added for CIELAB
 import io
 import base64
 import sys # Added for potential debug prints
+import itertools # For combinations
 
 def remove_background(image_data):
     """
@@ -32,6 +33,20 @@ def remove_background(image_data):
     data[white_areas] = [255, 255, 255, 0]  # 透明に設定
     return Image.fromarray(data)
 
+def hex_to_lab(hex_color_string):
+    """
+    Converts a hex color string to its CIELAB representation.
+    """
+    hex_color = hex_color_string.lstrip('#')
+    r = int(hex_color[0:2], 16)
+    g = int(hex_color[2:4], 16)
+    b = int(hex_color[4:6], 16)
+
+    # Normalize RGB and convert to the 1x1x3 numpy array format for rgb2lab
+    rgb_normalized = np.array([[[r / 255.0, g / 255.0, b / 255.0]]], dtype=np.float32)
+    lab_array = rgb2lab(rgb_normalized)
+    return lab_array[0] # Return the 1D CIELAB array [L, a, b]
+
 def find_closest_color(rgb, color_palette):
     """
     RGB値に最も近いパレット色を見つける (using CIELAB color space)
@@ -49,7 +64,7 @@ def find_closest_color(rgb, color_palette):
         # HEX to RGB (0-255)
         hex_color_str_palette = hex_color_palette_entry.lstrip('#')
         palette_rgb_tuple = tuple(int(hex_color_str_palette[i:i+2], 16) for i in (0, 2, 4))
-        
+
         # Convert palette RGB to CIELAB
         palette_rgb_normalized = np.array([[(c / 255.0) for c in palette_rgb_tuple]], dtype=np.float32) # Corrected: removed extra ']'
         palette_lab = rgb2lab(palette_rgb_normalized)[0]
@@ -71,7 +86,7 @@ def find_closest_color(rgb, color_palette):
 
     return f"#{closest_hex_color_str}", closest_name
 
-def create_pixel_art(image_data, size, color_palette):
+def create_pixel_art(image_data, size, color_palette, max_colors=0): # Added max_colors
     """
     画像をピクセルアートに変換
     """
@@ -134,18 +149,108 @@ def create_pixel_art(image_data, size, color_palette):
         
         pixel_art.append(pixel_row)
     
-    used_colors_list = [
-        {
+    # Corrected reconstruction of used_colors_list:
+    # `used_colors` keys are the 'name' from the palette.
+    # `color_palette` is a dict like {name: hex_string}
+    current_used_colors_list = []
+    for name, count in used_colors.items():
+        # Ensure the name exists in the palette to avoid KeyError
+        # find_closest_color should always return a name that's a key in color_palette.
+        hex_value_for_name = color_palette.get(name, "#000000") # Default to black if name somehow not in palette
+        current_used_colors_list.append({
             'name': name,
-            'color': color_palette[name],
+            'color': hex_value_for_name,
             'count': count
-        }
-        for name, count in used_colors.items()
-    ]
+        })
+
+    # ---- START COLOR REDUCTION LOGIC ----
+    # Convert used_colors_list to a dictionary for easier management during reduction
+    # Key by hex color string for direct access (assuming hex string is unique identifier)
+    # However, the current_used_colors_list has 'color' field which includes '#'.
+    # And the placeholder removal below uses dict keys.
+    # Let's key by 'name' as it's used above and likely more stable if hex strings can vary (e.g. #fff vs #FFFFFF)
+    # Or better, use the hex string (unique color value) as the key.
+    # The `closest_hex_color_str` in `find_closest_color` is without '#'. Let's use that form.
+    # `find_closest_color` returns f"#{closest_hex_color_str}"
     
+    # Re-think current_used_colors_dict structure.
+    # `used_colors` is already a dict: { colorName: count }
+    # `color_palette` is { colorName: hexString }
+    # `current_used_colors_list` is [{name: colorName, color: hexString, count: count}, ...]
+
+    # For reduction, we need to manage a list of unique colors currently in the image.
+    # `current_used_colors_list` is that list.
+
+    modifiable_pixel_art = [[p.copy() for p in row] for row in pixel_art] # Deep copy
+    # Use a dictionary for current used colors, keyed by hex string (e.g., "#RRGGBB")
+    # Each value will be the {'name': ..., 'color': ..., 'count': ...} dict
+    current_used_colors_dict = {item['color']: item.copy() for item in current_used_colors_list}
+
+    if max_colors > 0 and len(current_used_colors_dict) > max_colors:
+        # Pre-calculate LAB values for all current colors for efficiency
+        lab_cache = {hex_color: hex_to_lab(hex_color) for hex_color in current_used_colors_dict.keys()}
+
+        while len(current_used_colors_dict) > max_colors:
+            unique_hex_colors = list(current_used_colors_dict.keys())
+            if len(unique_hex_colors) < 2:
+                break # Not enough colors to merge
+
+            min_distance = float('inf')
+            closest_pair = None
+
+            for hex1, hex2 in itertools.combinations(unique_hex_colors, 2):
+                lab1 = lab_cache[hex1]
+                lab2 = lab_cache[hex2]
+                distance = np.linalg.norm(lab1 - lab2)
+                if hex1 == '#FFFFFF' or hex2 == '#FFFFFF' \
+                    or hex1 == '#F5F5F5' or hex2 == '#F5F5F5':
+                    distance = np.inf
+
+                if distance < min_distance:
+                    min_distance = distance
+                    closest_pair = (hex1, hex2)
+
+            if closest_pair is None: # Should not happen if len(unique_hex_colors) >= 2
+                break
+
+            hex_color1, hex_color2 = closest_pair
+
+            # Determine which color to keep and which to replace
+            # Keep the one with higher count. If counts are equal, an arbitrary one (e.g. first) is fine.
+            if current_used_colors_dict[hex_color2]['count'] > current_used_colors_dict[hex_color1]['count']:
+                hex_to_keep = hex_color2
+                hex_to_replace = hex_color1
+            else:
+                hex_to_keep = hex_color1
+                hex_to_replace = hex_color2
+
+            # print(f"Debug: Merging {hex_to_replace} into {hex_to_keep}", file=sys.stderr)
+
+            # Update counts and color info in current_used_colors_dict
+            color_to_replace_info = current_used_colors_dict[hex_to_replace]
+            current_used_colors_dict[hex_to_keep]['count'] += color_to_replace_info['count']
+            del current_used_colors_dict[hex_to_replace]
+
+            # Update LAB cache: remove replaced color, no need to update kept one as its LAB value doesn't change
+            if hex_to_replace in lab_cache:
+                del lab_cache[hex_to_replace]
+
+            # Update modifiable_pixel_art
+            name_to_keep = current_used_colors_dict[hex_to_keep]['name']
+            for r_idx, row in enumerate(modifiable_pixel_art):
+                for c_idx, pixel_info in enumerate(row):
+                    if pixel_info['color'] == hex_to_replace:
+                        modifiable_pixel_art[r_idx][c_idx]['color'] = hex_to_keep
+                        modifiable_pixel_art[r_idx][c_idx]['colorName'] = name_to_keep
+
+        final_used_colors_list = list(current_used_colors_dict.values())
+    else:
+        final_used_colors_list = current_used_colors_list
+    # ---- END COLOR REDUCTION LOGIC ----
+
     return {
-        'pixelArt': pixel_art,
-        'usedColors': used_colors_list
+        'pixelArt': modifiable_pixel_art,
+        'usedColors': final_used_colors_list
     }
 
 if __name__ == "__main__":
@@ -161,11 +266,12 @@ if __name__ == "__main__":
         color_palette = input_data.get("color_palette")
         position = input_data.get("position")
         scale = input_data.get("scale")
+        max_colors = input_data.get('max_colors', 0) # Extract max_colors, default to 0
 
-        if not all([image_data, size, color_palette]):
+        if not all([image_data, size, color_palette]): # max_colors can be 0, so not checked here
             raise ValueError("Missing required parameters: image_data, size, or color_palette")
 
-        result = create_pixel_art(image_data, size, color_palette)
+        result = create_pixel_art(image_data, size, color_palette, max_colors) # Pass max_colors
 
         sys.stdout.write(json.dumps(result))
 
