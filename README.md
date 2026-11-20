@@ -10,51 +10,49 @@ Follow these steps to set up and run the application locally.
 
 Make sure you have the following installed:
 
-*   **Node.js:** (LTS version recommended)
-*   **npm** (comes with Node.js) or **pnpm**
-*   **Python 3:** (Version 3.7 or higher recommended)
-*   **pip** (comes with Python)
+*   **Node.js:** 20.9 or higher (LTS version recommended)
+*   **npm** (comes with Node.js)
+*   **Python 3:** 3.10 or higher
+*   **pip** (comes with Python) or **uv**
 
 ### 1. Install Python Dependencies
 
-The backend uses a Python script for image processing. Install the necessary Python libraries:
+The backend uses a Python script for image processing. Create a virtual environment named `.venv` in the project root and install the libraries listed in `requirements.txt`:
 
+Using pip:
 ```bash
-pip install Pillow numpy scikit-learn scikit-image
+python -m venv .venv
+# Windows: .venv\Scripts\activate / macOS, Linux: source .venv/bin/activate
+pip install -r requirements.txt
 ```
+
+Or using uv:
+```bash
+uv venv
+uv pip install -r requirements.txt
+```
+
+The API route uses the Python interpreter in `.venv` automatically, so the virtual environment does not need to be activated when starting the server. To use a different interpreter, set the `PYTHON_PATH` environment variable to its path. Without `.venv` or `PYTHON_PATH`, `python3` (`python` on Windows) on `PATH` is used.
 
 ### 2. Install Node.js Dependencies
 
 Navigate to the project's root directory in your terminal and install the Node.js dependencies:
 
-Using npm:
 ```bash
 npm install
 ```
-
-Or using pnpm:
-```bash
-pnpm install
-```
-*(If you encounter issues with peer dependencies, you might need to use `npm install --legacy-peer-deps` or configure pnpm accordingly.)*
 
 ### 3. Run the Application
 
 Once the dependencies are installed, you can start the Next.js development server:
 
-Using npm:
 ```bash
 npm run dev
 ```
 
-Or using pnpm:
-```bash
-pnpm dev
-```
-
 ### 4. Access the Application
 
-After the server starts (usually indicated by a message like `✓ Ready in ...ms` and `event - compiled client and server successfully in ... ms`), open your web browser and navigate to:
+After the server starts (indicated by a message like `✓ Ready in ...s`), open your web browser and navigate to:
 
 [http://localhost:3000](http://localhost:3000)
 

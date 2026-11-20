@@ -1,16 +1,29 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { spawn } from "child_process"
+import fs from "fs"
 import path from "path"
+
+// Prefer PYTHON_PATH, then the project's .venv, then the system Python
+function resolvePythonExecutable(): string {
+  if (process.env.PYTHON_PATH) return process.env.PYTHON_PATH
+  const venvPython =
+    process.platform === "win32"
+      ? path.join(process.cwd(), ".venv", "Scripts", "python.exe")
+      : path.join(process.cwd(), ".venv", "bin", "python")
+  if (fs.existsSync(venvPython)) return venvPython
+  // On Windows "python3" usually resolves to the Microsoft Store stub, which exits with an error instead of ENOENT
+  return process.platform === "win32" ? "python" : "python3"
+}
 
 export async function POST(request: NextRequest) {
   try {
     const { image, size, position, scale, colorPalette, maxColors } = await request.json()
 
     const scriptPath = path.join(process.cwd(), "scripts", "pixel_art_converter.py")
-    const pythonExecutable = "python3" // Prefer python3
+    const pythonExecutable = resolvePythonExecutable()
 
     return new Promise((resolve, reject) => {
-      const pythonProcess = spawn(pythonExecutable, [scriptPath])
+      const pythonProcess = spawn(/*turbopackIgnore: true*/ pythonExecutable, [scriptPath])
 
       let stdoutData = ""
       let stderrData = ""
